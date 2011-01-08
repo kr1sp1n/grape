@@ -78,6 +78,12 @@ module Grape
         new_format ? set(:default_format, new_format.to_sym) : settings[:default_format]
       end
 
+      # Specify the default callback parameter for the API's 
+      # JSONP ability.
+      def callback_param(new_callback = nil)
+        new_callback ? set(:callback_param, new_callback.to_sym) : settings[:callback_param]
+      end
+
       # Add helper methods that will be accessible from any
       # endpoint within this namespace (and child namespaces).
       #

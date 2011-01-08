@@ -7,6 +7,7 @@ module Grape
       CONTENT_TYPES = {
         :xml => 'application/xml',
         :json => 'application/json',
+        :jsonp => 'application/javascript',
         :atom => 'application/atom+xml',
         :rss => 'application/rss+xml',
         :txt => 'text/plain'
@@ -15,7 +16,8 @@ module Grape
       def default_options
         { 
           :default_format => :txt,
-          :content_types => {}
+          :content_types => {},
+          :callback_param => :callback
         }
       end
       
@@ -33,11 +35,17 @@ module Grape
       
       def before
         fmt = format_from_extension || format_from_header || options[:default_format]
-                
+        callback = request.params[options[:callback_param].to_s]
+        
         if content_types.key?(fmt)
-          env['api.format'] = fmt          
+          env['api.format'] = fmt
         else
           throw :error, :status => 406, :message => 'The requested format is not supported.'
+        end
+        
+        unless callback.nil? || callback.empty?
+          env['api.callback'] = callback
+          env['api.format'] = :jsonp
         end
       end
       
@@ -80,11 +88,13 @@ module Grape
           bodymap << case env['api.format']
             when :json
               encode_json(body)
+            when :jsonp
+              env['api.callback']+"("+encode_json(body)+");"
             when :txt
               encode_txt(body)
           end
         end
-        headers['Content-Type'] = 'application/json'
+        headers['Content-Type'] = content_types[env['api.format']]
         Rack::Response.new(bodymap, status, headers).to_a
       end
       
